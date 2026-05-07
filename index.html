@@ -6,49 +6,100 @@
   <title>Hapara Teacher Extractor</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    textarea { width: 100%; height: 200px; margin-bottom: 10px; }
-    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+    video { width: 100%; max-width: 800px; display: none; }
+    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; margin: 5px; }
     button:hover { background-color: #0056b3; }
     ul { list-style-type: none; padding: 0; }
     li { margin: 5px 0; padding: 5px; background-color: #f0f0f0; }
     #result { margin-top: 20px; }
+    #status { margin-top: 10px; color: green; }
   </style>
 </head>
 <body>
   <h1>Hapara Teacher Extractor</h1>
-  <p>Paste the text from the access barrier page below and click "Extract Teachers".</p>
-  <textarea id="inputText" placeholder="Paste the text here..."></textarea>
-  <button id="extractBtn">Extract Teachers</button>
+  <p>Share your screen (select the tab with the access barrier page) to automatically extract online teachers every minute.</p>
+  <button id="startShare">Start Screen Share</button>
+  <button id="stopShare" disabled>Stop</button>
+  <div id="status"></div>
+  <video id="video" autoplay muted></video>
+  <canvas id="canvas" style="display: none;"></canvas>
   <div id="result"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
-    document.getElementById('extractBtn').addEventListener('click', function() {
-      var text = document.getElementById('inputText').value;
-      var lines = text.split('\n');
-      var teachers = [];
-      for (var line of lines) {
-        line = line.trim();
-        if (line.startsWith('Teacher ') && !line.includes('(offline)')) {
-          var name = line.replace('Teacher ', '').replace('Select', '').trim();
+    let stream;
+    let intervalId;
+
+    document.getElementById('startShare').addEventListener('click', async function() {
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('startShare').disabled = true;
+        document.getElementById('stopShare').disabled = false;
+        document.getElementById('status').textContent = 'Screen sharing started. Extracting every minute...';
+        intervalId = setInterval(extractTeachers, 60000);
+        // Extract immediately
+        setTimeout(extractTeachers, 1000);
+      } catch (err) {
+        console.error('Error starting screen share:', err);
+        document.getElementById('status').textContent = 'Failed to start screen share.';
+      }
+    });
+
+    document.getElementById('stopShare').addEventListener('click', function() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        document.getElementById('video').srcObject = null;
+        document.getElementById('startShare').disabled = false;
+        document.getElementById('stopShare').disabled = true;
+        document.getElementById('status').textContent = 'Screen sharing stopped.';
+        clearInterval(intervalId);
+      }
+    });
+
+    async function extractTeachers() {
+      const canvas = document.getElementById('canvas');
+      const video = document.getElementById('video');
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+
+      try {
+        const result = await Tesseract.recognize(canvas, 'eng');
+        const text = result.data.text;
+        console.log('Extracted text:', text);
+        parseTeachers(text);
+      } catch (err) {
+        console.error('OCR error:', err);
+        document.getElementById('status').textContent = 'OCR failed.';
+      }
+    }
+
+    function parseTeachers(text) {
+      const lines = text.split('\n');
+      const teachers = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('Teacher ') && !trimmed.includes('(offline)')) {
+          const name = trimmed.replace('Teacher ', '').replace('Select', '').trim();
           teachers.push(name);
         }
       }
       displayTeachers(teachers);
-    });
+    }
 
     function displayTeachers(teachers) {
-      var resultDiv = document.getElementById('result');
+      const resultDiv = document.getElementById('result');
       if (teachers.length === 0) {
         resultDiv.innerHTML = '<p>No teachers online.</p>';
       } else {
-        var ul = document.createElement('ul');
-        for (var teacher of teachers) {
-          var li = document.createElement('li');
-          li.textContent = teacher;
-          ul.appendChild(li);
+        let html = '<h2>Online Teachers:</h2><ul>';
+        for (const teacher of teachers) {
+          html += `<li>${teacher}</li>`;
         }
-        resultDiv.innerHTML = '<h2>Online Teachers:</h2>';
-        resultDiv.appendChild(ul);
+        html += '</ul>';
+        resultDiv.innerHTML = html;
       }
     }
   </script>
