@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hapara Teacher Extractor</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 200px; margin-bottom: 10px; }
+    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin: 5px 0; padding: 5px; background-color: #f0f0f0; }
+    #result { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Hapara Teacher Extractor</h1>
+  <p>Paste the text from the access barrier page below and click "Extract Teachers".</p>
+  <textarea id="inputText" placeholder="Paste the text here..."></textarea>
+  <button id="extractBtn">Extract Teachers</button>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('extractBtn').addEventListener('click', function() {
+      var text = document.getElementById('inputText').value;
+      var lines = text.split('\n');
+      var teachers = [];
+      for (var line of lines) {
+        line = line.trim();
+        if (line.startsWith('Teacher ') && !line.includes('(offline)')) {
+          var name = line.replace('Teacher ', '').replace('Select', '').trim();
+          teachers.push(name);
+        }
+      }
+      displayTeachers(teachers);
+    });
+
+    function displayTeachers(teachers) {
+      var resultDiv = document.getElementById('result');
+      if (teachers.length === 0) {
+        resultDiv.innerHTML = '<p>No teachers online.</p>';
+      } else {
+        var ul = document.createElement('ul');
+        for (var teacher of teachers) {
+          var li = document.createElement('li');
+          li.textContent = teacher;
+          ul.appendChild(li);
+        }
+        resultDiv.innerHTML = '<h2>Online Teachers:</h2>';
+        resultDiv.appendChild(ul);
+      }
+    }
+  </script>
+</body>
+</html>
