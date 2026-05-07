@@ -36,8 +36,8 @@
         document.getElementById('video').srcObject = stream;
         document.getElementById('startShare').disabled = true;
         document.getElementById('stopShare').disabled = false;
-        document.getElementById('status').textContent = 'Screen sharing started. Extracting every minute...';
-        intervalId = setInterval(extractTeachers, 60000);
+        document.getElementById('status').textContent = 'Screen sharing started. Extracting every 15 seconds...';
+        intervalId = setInterval(extractTeachers, 15000);
         // Extract immediately
         setTimeout(extractTeachers, 1000);
       } catch (err) {
